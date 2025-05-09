@@ -73,7 +73,7 @@ class PDFSearcher:
             query_tokens: Preprocessed query tokens
             
         Returns:
-            Up to 5 most relevant sentences containing query tokens
+            Up to 5 occurrences of query terms, each with 5 words before and 5 words after
         """
         paragraphs = self.indexer.document_paragraphs.get(doc_id, [])
         if not paragraphs:
@@ -82,45 +82,56 @@ class PDFSearcher:
         # Convert query tokens to a set for faster lookup
         query_token_set = set(query_tokens)
         
-        # Split paragraphs into sentences
-        all_sentences = []
-        import nltk.tokenize
-        for paragraph in paragraphs:
-            sentences = nltk.tokenize.sent_tokenize(paragraph)
-            all_sentences.extend(sentences)
+        # Join paragraphs to get full document text
+        full_text = " ".join(paragraphs)
         
-        # Score each sentence based on query token matches
-        scored_sentences = []
-        for sentence in all_sentences:
-            # Preprocess sentence
-            sentence_tokens = self.indexer.preprocess_text(sentence)
-            
-            # Count matching tokens
-            match_count = sum(1 for token in sentence_tokens if token in query_token_set)
-            
-            # Store sentences with at least one match
-            if match_count > 0:
-                scored_sentences.append((sentence, match_count))
+        # Tokenize the full text into words
+        import re
+        words = re.findall(r'\b\w+\b', full_text.lower())
         
-        # Sort sentences by match count (descending)
-        scored_sentences.sort(key=lambda x: x[1], reverse=True)
+        # Find occurrences of query tokens in the document
+        occurrences = []
         
-        # Get up to 5 best matching sentences
-        top_snippets = scored_sentences[:5]
+        for i, word in enumerate(words):
+            # Check if this word matches any query token
+            if word in query_token_set:
+                # Calculate the start and end indices for the context window
+                start_idx = max(0, i - 5)
+                end_idx = min(len(words), i + 6)  # +6 to include the current word
+                
+                context_words = words[start_idx:end_idx]
+                
+                snippet = " ".join(context_words)
+                
+                snippet_pattern = re.escape(snippet)
+                match = re.search(snippet_pattern, full_text.lower())
+                if match:
+                    start, end = match.span()
+                    original_cased_snippet = full_text[start:end]
+                    occurrences.append((original_cased_snippet, 1))  # The 1 is just a placeholder score
+                else:
+                    occurrences.append((snippet, 1))
         
-        # If no sentences match, return the first substantial sentence
-        if not top_snippets and all_sentences:
-            for s in all_sentences:
-                if len(s.split()) >= 5:
-                    return s
-            if all_sentences:
-                return all_sentences[0]
+        # Remove duplicates while preserving order
+        unique_occurrences = []
+        seen_snippets = set()
+        for snippet, score in occurrences:
+            if snippet not in seen_snippets:
+                unique_occurrences.append((snippet, score))
+                seen_snippets.add(snippet)
+        
+        # Get up to 5 occurrences
+        top_snippets = unique_occurrences[:5]
+        
+        # If no snippets found, return a default message
+        if not top_snippets:
+            for paragraph in paragraphs:
+                if len(paragraph.split()) >= 5:
+                    return paragraph[:100] + "..."  # Return the first 100 chars of a substantial paragraph
+            return "No relevant snippets found"
             
         # Join the top snippets with separator
-        if top_snippets:
-            return " [...] ".join([snippet for snippet, _ in top_snippets])
-        else:
-            return "No relevant snippets found"
+        return " [...] ".join([snippet for snippet, _ in top_snippets])
     
     def highlight_matches(self, text: str, query_tokens: List[str]) -> str:
         """

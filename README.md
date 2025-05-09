@@ -2,28 +2,35 @@
 
 A simple Python tool for searching PDF documents in Bahasa Indonesia using the BM25 algorithm. The system extracts text from PDFs, indexes them, and allows for keyword-based searching to find the most relevant documents.
 
-## Requirements
-
-- Python 3.8 or higher
-- PyPDF2 (or other PDF extraction library)
-- rank_bm25
-- Additional dependencies as needed
-
 ## Setup
 
 1. Clone this repository
-2. Install required packages from requirements.txt:
+2. Create and activate a Python virtual environment:
+   ```
+   # Create a virtual environment
+   python -m venv venv
+   
+   # Activate the virtual environment
+   # On Windows:
+   venv\Scripts\activate
+   
+   # On macOS/Linux:
+   source venv/bin/activate
+   ```
+3. Install required packages from requirements.txt:
    ```
    pip install -r requirements.txt
    ```
 
 ## Usage
 
-The system consists of two main Python scripts:
+### 1. Preparing Documents
 
-### 1. Indexing (index.py)
+Before running the indexing process, place your PDF documents in the `documents` directory. This is where the system will look for PDF files to index.
 
-Run this first to extract text from PDFs and create the index:
+### 2. Indexing (index.py)
+
+Run this to extract text from PDFs and create the index:
 
 ```
 python index.py
@@ -31,7 +38,7 @@ python index.py
 
 This processes all PDF files from the `documents` folder and stores the index in the `index` folder.
 
-### 2. Searching (search.py)
+### 3. Searching (search.py)
 
 After indexing, run the search script in one of the following ways:
 
